@@ -74,7 +74,8 @@ button{cursor:pointer;border:0;background:none;padding:0}
 /* 첫 화면 */
 .greet h1{margin:0;font-size:34px;font-weight:600;letter-spacing:-.025em;line-height:1.2}
 .greet p{margin:8px 0 0;color:var(--muted);font-size:15px}
-.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--gap);margin-top:40px}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--gap);margin-top:40px;align-items:start}
+.grid>.tile{align-self:stretch}
 .tile{grid-column:span 3;background:var(--surface);border-radius:var(--radius);padding:18px 20px;display:flex;flex-direction:column;gap:6px;min-height:150px;text-align:left;transition:background .15s}
 button.tile:hover{background:var(--ct)}
 .tile .lbl{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
@@ -191,6 +192,24 @@ textarea::placeholder{color:var(--faint)}
 .del{color:var(--muted);font-size:13px;text-decoration:underline;text-underline-offset:3px}
 .del.ask{color:var(--negative);font-weight:600}
 .warn{background:#fdecea;color:#7a1d14;border-radius:14px;padding:12px 16px;font-size:14px;margin:-24px 0 24px}
+/* 글감 */
+:root{--idea:#b7791f;--idea-tint:#fbf1dc}
+.idea-btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:600;background:var(--surface);color:var(--muted);transition:background .15s,color .15s}
+.idea-btn:hover{background:#ebebe8;color:var(--text)}
+.idea-btn[aria-pressed="true"]{background:var(--idea-tint);color:var(--idea)}
+.idea-note{border:0;border-radius:12px;background:var(--idea-tint);font-size:15px;padding:11px 14px;width:100%;color:var(--text)}
+.idea-note::placeholder{color:var(--idea);opacity:.7}
+.idea-note:focus{outline:2px solid var(--idea);outline-offset:0}
+.star{color:var(--idea);font-weight:700}
+.hd .n{display:flex;justify-content:space-between;align-items:center}
+.hd .n .star{font-size:12px}
+.hd.today .n .star{color:#f2c46d}
+.stack{grid-column:span 3;display:flex;flex-direction:column;gap:var(--gap)}
+.stack .panel{flex:1}
+.row .ex .star{margin-right:4px}
+.idea-row .kind{color:var(--idea)}
+.ideas-more{margin-top:8px;font-size:13px;color:var(--muted);text-decoration:underline;text-underline-offset:3px}
+@media (max-width:1000px){.stack{grid-column:1/-1}}
 /* 내보내기 */
 .greet{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
 .priv{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer}
@@ -312,18 +331,24 @@ textarea::placeholder{color:var(--faint)}
         </div>
         <div class="legend"><span class="k-work"><i></i>업무일지</span><span class="k-morning"><i></i>모닝페이지</span><span class="k-read"><i></i>독서일지</span><span>날짜를 누르면 그날 기록을 열어요</span></div>
       </section>
-      <section class="panel p3 rise" aria-labelledby="st-title">
-        <h2 id="st-title">연속 기록</h2>
-        <div class="streaks" id="streaks"></div>
-      </section>
+      <div class="stack rise">
+        <section class="panel" aria-labelledby="st-title">
+          <h2 id="st-title">연속 기록</h2>
+          <div class="streaks" id="streaks"></div>
+        </section>
+        <section class="panel" aria-labelledby="bk-title">
+          <h2><span id="bk-title">읽고 있는 책</span><span class="sub" id="bk-count"></span></h2>
+          <div class="rows k-read" id="books"></div>
+        </section>
+      </div>
 
+      <section class="panel p6 rise" aria-labelledby="id-title">
+        <h2><span id="id-title"><span class="star">★</span> 글감 모음</span><span class="sub" id="id-count"></span></h2>
+        <div class="rows" id="ideas"></div>
+      </section>
       <section class="panel p6 rise" aria-labelledby="rc-title">
         <h2><span id="rc-title">최근 기록</span><span class="sub" id="rc-count"></span></h2>
         <div class="rows" id="recent"></div>
-      </section>
-      <section class="panel p6 rise" aria-labelledby="bk-title">
-        <h2><span id="bk-title">읽고 있는 책</span><span class="sub" id="bk-count"></span></h2>
-        <div class="rows k-read" id="books"></div>
       </section>
     </div>
   </section>
@@ -353,8 +378,9 @@ textarea::placeholder{color:var(--faint)}
       <article class="paper">
         <div class="paper-head">
           <div><div class="kind" id="kind"></div><h2 id="date-title"></h2></div>
-          <div class="nav"><button type="button" id="d-prev" aria-label="전날">‹ 전날</button><button type="button" id="d-today">오늘</button><button type="button" id="d-next" aria-label="다음날">다음날 ›</button></div>
+          <div class="nav"><button type="button" class="idea-btn" id="idea" aria-pressed="false" title="책에 쓸 만한 기록이라면 눌러 두세요">☆ 글감</button><button type="button" id="d-prev" aria-label="전날">‹ 전날</button><button type="button" id="d-today">오늘</button><button type="button" id="d-next" aria-label="다음날">다음날 ›</button></div>
         </div>
+        <input class="idea-note" id="idea-note" type="text" maxlength="120" placeholder="★ 어떤 이야기로 쓸지 한 줄 메모 (선택)" aria-label="글감 메모" hidden>
         <input class="book" id="book" type="text" maxlength="80" placeholder="책 제목 (선택)" aria-label="책 제목" hidden>
         <textarea id="text" aria-label="기록" spellcheck="false"></textarea>
         <div class="paper-foot">
@@ -387,6 +413,7 @@ textarea::placeholder{color:var(--faint)}
           <label class="chip k-read"><input type="checkbox" value="read" checked><span><i></i>독서일지</span></label>
         </div>
         <p class="hint">모닝페이지는 사적인 내용이 많아서 처음에는 빠져 있어요. 필요하면 눌러서 넣으세요.</p>
+        <label class="opt" style="margin-top:10px"><input type="checkbox" id="ex-idea"><span><span class="star">★</span> 글감 표시한 기록만<small>책 기획이나 원고 쓸 때 글감만 모아 받아요.</small></span></label>
       </div>
       <div><h3>넣을 기록</h3>
         <div class="pick-tools"><span id="ex-count"></span><span><button type="button" id="ex-all">모두 선택</button><button type="button" id="ex-none">모두 해제</button></span></div>
@@ -482,7 +509,7 @@ function renderHome(){
   });
   $('v-all').innerHTML=days.size+'<small>일 / '+now.getDate()+'일</small>';
   $('c-all').textContent='세 가지 중 하나라도 쓴 날';
-  renderHC(); renderStreaks(); renderRecent(); renderBooks();
+  renderHC(); renderStreaks(); renderRecent(); renderBooks(); renderIdeas();
 }
 function renderHC(){
   const now=new Date(), base=new Date(now.getFullYear(),now.getMonth()+hcOffset,1), y=base.getFullYear(), m=base.getMonth(), T=today();
@@ -491,7 +518,7 @@ function renderHC(){
   for(let i=0;i<first;i++)h+='<span class="hd out"></span>';
   for(let d=1;d<=n;d++){
     const k=y+'-'+pad(m+1)+'-'+pad(d), fut=k>T, dt=new Date(y,m,d), has=KINDS.filter(t=>entries[t][k]);
-    h+='<button type="button" class="hd'+(dt.getDay()===0?' sun':'')+(k===T?' today':'')+'" data-day="'+k+'"'+(fut?' disabled':'')+' aria-label="'+(m+1)+'월 '+d+'일'+(has.length?' '+has.map(t=>TYPES[t].name).join(', ')+' 기록':' 기록 없음')+'"><span class="n">'+d+'</span><span class="bars">'+KINDS.map(t=>'<i class="k-'+t+(entries[t][k]?' on':'')+'"></i>').join('')+'</span></button>';
+    h+='<button type="button" class="hd'+(dt.getDay()===0?' sun':'')+(k===T?' today':'')+'" data-day="'+k+'"'+(fut?' disabled':'')+' aria-label="'+(m+1)+'월 '+d+'일'+(has.length?' '+has.map(t=>TYPES[t].name).join(', ')+' 기록':' 기록 없음')+'"><span class="n">'+d+(KINDS.some(t=>entries[t][k]&&entries[t][k].idea)?'<span class="star" aria-label="글감">★</span>':'')+'</span><span class="bars">'+KINDS.map(t=>'<i class="k-'+t+(entries[t][k]?' on':'')+'"></i>').join('')+'</span></button>';
   }
   $('hc-grid').innerHTML=h;
 }
@@ -506,9 +533,20 @@ function renderRecent(){
   all.sort((a,b)=>b.date.localeCompare(a.date)||(b.updated||0)-(a.updated||0));
   $('rc-count').textContent=all.length?'전체 '+all.length+'개':'';
   $('recent').innerHTML=all.length?all.slice(0,5).map(e=>{const d=parse(e.date);
-    return '<button type="button" class="row k-'+e.type+'" data-open="'+e.type+'|'+e.date+'"><span class="dt"><b>'+md(e.date)+'</b>'+DOW[d.getDay()]+'요일</span><span class="tx"><span class="kind">'+TYPES[e.type].name+(e.book?' · '+esc(e.book):'')+'</span><span class="ex">'+esc(firstLine(e.text)||'(제목만 적음)')+(e.private?'<span class="tag-priv">내보내기 제외</span>':'')+'</span>'+'</span></button>'}).join('')
+    return '<button type="button" class="row k-'+e.type+'" data-open="'+e.type+'|'+e.date+'"><span class="dt"><b>'+md(e.date)+'</b>'+DOW[d.getDay()]+'요일</span><span class="tx"><span class="kind">'+TYPES[e.type].name+(e.book?' · '+esc(e.book):'')+'</span><span class="ex">'+(e.idea?'<span class="star">★</span>':'')+esc(firstLine(e.text)||'(제목만 적음)')+(e.private?'<span class="tag-priv">내보내기 제외</span>':'')+'</span>'+'</span></button>'}).join('')
     :'<p class="empty">아직 기록이 없어요. 위에서 하나를 골라 첫 기록을 남겨 보세요.</p>';
 }
+let ideasAll=false;
+function renderIdeas(){
+  const all=[];KINDS.forEach(t=>Object.values(entries[t]).forEach(e=>{if(e.idea)all.push({...e,type:t})}));
+  all.sort((a,b)=>b.date.localeCompare(a.date));
+  $('id-count').textContent=all.length?all.length+'개':'';
+  const show=ideasAll?all:all.slice(0,5);
+  $('ideas').innerHTML=all.length?show.map(e=>{const d=parse(e.date);
+    return '<button type="button" class="row idea-row k-'+e.type+'" data-open="'+e.type+'|'+e.date+'"><span class="dt"><b>'+md(e.date)+'</b>'+TYPES[e.type].name+'</span><span class="tx">'+(e.ideaNote?'<span class="kind">'+esc(e.ideaNote)+'</span>':'<span class="kind" style="color:var(--faint);font-weight:400">메모 없음</span>')+'<span class="ex">'+esc(firstLine(e.text)||e.book||'')+'</span></span></button>'}).join('')+(all.length>5?'<button type="button" class="ideas-more" id="ideas-more">'+(ideasAll?'접기':'전체 '+all.length+'개 보기')+'</button>':'')
+    :'<p class="empty">쓰기 화면에서 <span class="star">☆ 글감</span>을 누르면, 책에 쓸 만한 기록이 여기에 모여요.</p>';
+}
+document.addEventListener('click',e=>{if(e.target.closest('#ideas-more')){ideasAll=!ideasAll;renderIdeas()}});
 function renderBooks(){
   const B={};Object.values(entries.read).forEach(e=>{const n=(e.book||'').trim();if(!n)return;(B[n]=B[n]||{n,days:0,last:'',first:e.date});B[n].days++;if(e.date>B[n].last)B[n].last=e.date;if(e.date<B[n].first)B[n].first=e.date});
   const arr=Object.values(B).sort((a,b)=>b.last.localeCompare(a.last));
@@ -564,11 +602,11 @@ function loadText(){
   $('kind').textContent=TYPES[type].name;
   $('date-title').textContent=(d.getMonth()+1)+'월 '+d.getDate()+'일 '+DOW[d.getDay()]+'요일'+(sel===T?' · 오늘':'');
   $('text').placeholder=TYPES[type].ph;
-  $('text').value=e?e.text||'':''; $('book').hidden=type!=='read'; $('book').value=e&&e.book||''; $('priv').checked=!!(e&&e.private); privUI(); lastSaved=snap(); dirty=false;
+  $('text').value=e?e.text||'':''; $('book').hidden=type!=='read'; $('book').value=e&&e.book||''; $('priv').checked=!!(e&&e.private); privUI(); setIdea(!!(e&&e.idea)); $('idea-note').value=e&&e.ideaNote||''; lastSaved=snap(); dirty=false;
   $('d-next').disabled=sel>=T;
   setState(e?'저장됨 · '+timeOf(e.updated):'쓰기 시작하면 자동으로 저장돼요','');
   const dr=getDraft(type,sel);
-  if(dr&&dr.sn!==snap()&&(!e||(dr.ts||0)>(e.updated||0))){$('text').value=dr.text;$('book').value=dr.book||'';$('priv').checked=!!dr.priv;privUI();dirty=true;setState('저장 못 한 글을 되살렸어요 · 곧 저장돼요','ok');clearTimeout(saveTimer);saveTimer=setTimeout(save,600)}
+  if(dr&&dr.sn!==snap()&&(!e||(dr.ts||0)>(e.updated||0))){$('text').value=dr.text;$('book').value=dr.book||'';$('priv').checked=!!dr.priv;privUI();setIdea(!!dr.idea);$('idea-note').value=dr.note||'';dirty=true;setState('저장 못 한 글을 되살렸어요 · 곧 저장돼요','ok');clearTimeout(saveTimer);saveTimer=setTimeout(save,600)}
   $('del').hidden=!e; $('del').classList.remove('ask'); $('del').textContent='이 날 기록 지우기';
   updateGoal();
 }
@@ -579,19 +617,26 @@ function updateGoal(){
   const n=count($('text').value), g=TYPES[type].goal;
   $('goal').innerHTML=g?'<span class="num">'+n.toLocaleString()+' / '+g.toLocaleString()+'자</span><span class="gbar"><i style="width:'+Math.min(100,Math.round(n/g*100))+'%"></i></span>'+(n>=g?' <b>오늘 분량 완료</b>':''):'<span class="num">'+n.toLocaleString()+'자</span>';
 }
-const snap=()=>$('text').value+'\u0000'+(type==='read'?$('book').value:'')+'\u0000'+($('priv').checked?1:0);
+const snap=()=>$('text').value+'\u0000'+(type==='read'?$('book').value:'')+'\u0000'+($('priv').checked?1:0)+'\u0000'+(ideaOn?1:0)+'\u0000'+(ideaOn?$('idea-note').value:'');
+let ideaOn=false;
+function setIdea(v){ideaOn=v;const b=$('idea');b.setAttribute('aria-pressed',v);b.textContent=(v?'★':'☆')+' 글감';$('idea-note').hidden=!v}
+const metaNow=()=>({priv:$('priv').checked,idea:ideaOn,note:ideaOn?$('idea-note').value.trim():''});
+$('idea').onclick=()=>{setIdea(!ideaOn);dirty=true;putDraft(type,sel);save();toast(ideaOn?'글감으로 표시했어요':'글감 표시를 뺐어요');if(ideaOn)setTimeout(()=>$('idea-note').focus(),30)};
+$('idea-note').addEventListener('input',()=>{dirty=true;putDraft(type,sel);setState('입력 중…','');clearTimeout(saveTimer);saveTimer=setTimeout(save,900)});
+$('idea-note').addEventListener('blur',()=>{if(dirty)save()});
 const privUI=()=>$('priv-l').classList.toggle('on',$('priv').checked);
 $('priv').addEventListener('change',()=>{privUI();dirty=true;putDraft(type,sel);save();if($('priv').checked)toast('이 날 기록은 내보내기에서 빠져요')});
 ['text','book'].forEach(id=>{$(id).addEventListener('input',()=>{dirty=true;putDraft(type,sel);setState('입력 중…','');updateGoal();clearTimeout(saveTimer);saveTimer=setTimeout(save,900)});$(id).addEventListener('blur',()=>{if(dirty)save()})});
 /* 임시 보관함: 글자를 칠 때마다 기기에 바로 저장 (앱이 꺼져도 다시 열면 되살림) */
 let hasPending=false, restored=false, inflight=0;
 const dKey=(t,k)=>'j-draft:'+(me?me.uid:'')+':'+t+'_'+k;
-function putDraft(t,k){try{localStorage.setItem(dKey(t,k),JSON.stringify({text:$('text').value,book:t==='read'?$('book').value:'',priv:$('priv').checked,sn:snap(),ts:Date.now()}))}catch(e){}}
+function putDraft(t,k){try{localStorage.setItem(dKey(t,k),JSON.stringify({text:$('text').value,book:t==='read'?$('book').value:'',...(()=>{const m=metaNow();return {priv:m.priv,idea:m.idea,note:m.note}})(),sn:snap(),ts:Date.now()}))}catch(e){}}
 function getDraft(t,k){try{return JSON.parse(localStorage.getItem(dKey(t,k))||'null')}catch(e){return null}}
 function dropDraft(t,k,sn){try{const d=getDraft(t,k);if(d&&d.sn===sn)localStorage.removeItem(dKey(t,k))}catch(e){}}
-function writeEntry(t,k,text,book,sn,priv){
+function writeEntry(t,k,text,book,sn,meta){
+  meta=meta||{};
   const has=!!(text.trim()||book.trim());
-  const p=has?setDoc(entryRef(t,k),{type:t,date:k,text,len:count(text),...(t==='read'?{book:book.trim()}:{}),...(priv?{private:true}:{}),updated:Date.now()}):deleteDoc(entryRef(t,k));
+  const p=has?setDoc(entryRef(t,k),{type:t,date:k,text,len:count(text),...(t==='read'?{book:book.trim()}:{}),...(meta.priv?{private:true}:{}),...(meta.idea?{idea:true,ideaNote:meta.note||''}:{}),updated:Date.now()}):deleteDoc(entryRef(t,k));
   inflight++; syncState();
   return p.then(()=>{inflight--;if(!inflight&&navigator.onLine!==false)hasPending=false;dropDraft(t,k,sn);$('warn').hidden=true;syncState()},err=>{inflight--;syncState();throw err});
 }
@@ -599,7 +644,7 @@ function restoreDrafts(){   // 다른 날짜에 남아 있던 임시 글도 올�
   try{const pre='j-draft:'+me.uid+':';
     Object.keys(localStorage).filter(x=>x.startsWith(pre)).forEach(x=>{const [t,k]=x.slice(pre.length).split('_');const d=getDraft(t,k),e=entries[t]&&entries[t][k];
       if(!d||!TYPES[t])return; if(e&&(e.updated||0)>=(d.ts||0)){localStorage.removeItem(x);return}
-      if(t===type&&k===sel&&!$('write').hidden)return; writeEntry(t,k,d.text||'',d.book||'',d.sn,!!d.priv).catch(()=>{})});
+      if(t===type&&k===sel&&!$('write').hidden)return; writeEntry(t,k,d.text||'',d.book||'',d.sn,{priv:!!d.priv,idea:!!d.idea,note:d.note||''}).catch(()=>{})});
   }catch(e){}
 }
 function save(){
@@ -609,7 +654,7 @@ function save(){
   lastSaved=sn; putDraft(t,k);
   const has=!!(v.trim()||bk.trim()), here=()=>t===type&&k===sel;
   if(here()){setState(navigator.onLine===false?'기기에 저장됨 · 인터넷이 연결되면 올라가요':'저장 중…','ok');$('del').hidden=!has}
-  writeEntry(t,k,v,bk,sn,$('priv').checked).then(()=>{if(here()&&snap()===sn)setState(has?'저장됨 · '+timeOf(Date.now()):'비어 있어서 체크를 뺐어요','ok')})
+  writeEntry(t,k,v,bk,sn,metaNow()).then(()=>{if(here()&&snap()===sn)setState(has?'저장됨 · '+timeOf(Date.now()):'비어 있어서 체크를 뺐어요','ok')})
     .catch(e=>{if(here()){dirty=true;lastSaved='';setState('저장 안 됨 · 글은 기기에 남아 있어요','err')}if(/permission|insufficient/i.test(String(e&&(e.code||e.message))))$('warn').hidden=false});
 }
 async function flush(){if(dirty)save()}
@@ -635,7 +680,8 @@ function exRange(){
 }
 function exCandidates(){
   const [a,b]=exRange(), kinds=[...$('ex-kinds').querySelectorAll('input:checked')].map(x=>x.value), out=[];
-  kinds.forEach(t=>Object.values(entries[t]).forEach(e=>{if(e.date>=a&&e.date<=b)out.push({...e,type:t,key:t+'|'+e.date})}));
+  const onlyIdea=$('ex-idea').checked;
+  kinds.forEach(t=>Object.values(entries[t]).forEach(e=>{if(e.date>=a&&e.date<=b&&(!onlyIdea||e.idea))out.push({...e,type:t,key:t+'|'+e.date})}));
   return out.sort((x,y)=>x.date.localeCompare(y.date)||KINDS.indexOf(x.type)-KINDS.indexOf(y.type));
 }
 const exOn=e=>e.key in exPicked?exPicked[e.key]:!e.private;
@@ -644,7 +690,7 @@ function renderEx(){
   const C=exCandidates(), sel=C.filter(exOn), chars=sel.reduce((n,e)=>n+count(e.text||''),0);
   $('ex-count').textContent=C.length?C.length+'개 중 '+sel.length+'개 선택':'';
   $('ex-list').innerHTML=C.length?C.slice().reverse().map(e=>{const d=parse(e.date);
-    return '<label class="pick-row k-'+e.type+(exOn(e)?'':' off')+'"><input type="checkbox" data-key="'+e.key+'"'+(exOn(e)?' checked':'')+'><span class="dt">'+(d.getMonth()+1)+'/'+d.getDate()+' ('+DOW[d.getDay()]+')</span><span class="tx"><b>'+TYPES[e.type].name+'</b>'+esc((e.book?'『'+e.book+'』 ':'')+(firstLine(e.text)||''))+(e.private?'<span class="tag-priv">빼기 표시</span>':'')+'</span></label>'}).join('')
+    return '<label class="pick-row k-'+e.type+(exOn(e)?'':' off')+'"><input type="checkbox" data-key="'+e.key+'"'+(exOn(e)?' checked':'')+'><span class="dt">'+(d.getMonth()+1)+'/'+d.getDate()+' ('+DOW[d.getDay()]+')</span><span class="tx"><b>'+TYPES[e.type].name+'</b>'+(e.idea?'<span class="star">★</span> ':'')+esc((e.book?'『'+e.book+'』 ':'')+(firstLine(e.text)||''))+(e.private?'<span class="tag-priv">빼기 표시</span>':'')+'</span></label>'}).join('')
     :'<p class="empty" style="padding:12px">이 기간에 고른 종류의 기록이 없어요.</p>';
   $('ex-sum').innerHTML='<b>'+sel.length+'개</b> · '+chars.toLocaleString()+'자';
   $('ex-dl').disabled=$('ex-copy').disabled=!sel.length;
@@ -669,7 +715,7 @@ function exText(){
     const E=C.filter(e=>e.type===t); if(!E.length)return;
     L.push('','','## '+TYPES[t].name,'');
     E.forEach(e=>{const d=parse(e.date);
-      L.push('### '+e.date+' ('+DOW[d.getDay()]+')'+(e.book?' · 『'+e.book+'』':''),'',(e.text||'').trim()||'(내용 없음)','')});
+      L.push('### '+e.date+' ('+DOW[d.getDay()]+')'+(e.book?' · 『'+e.book+'』':'')+(e.idea?' · ★ 글감':''),'',...(e.idea&&e.ideaNote?['> 글감 메모: '+e.ideaNote,'']:[]),(e.text||'').trim()||'(내용 없음)','')});
   });
   return L.join('\n').replace(/\n{3,}/g,'\n\n')+'\n';
 }
@@ -681,6 +727,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('ex').hidden)exC
 $('ex-period').addEventListener('change',()=>{if(!$('ex-from').value){$('ex-from').value=today().slice(0,8)+'01';$('ex-to').value=today()}renderEx()});
 ['ex-from','ex-to'].forEach(id=>$(id).addEventListener('change',renderEx));
 $('ex-kinds').addEventListener('change',renderEx);
+$('ex-idea').addEventListener('change',renderEx);
 $('ex-list').addEventListener('change',e=>{const c=e.target.closest('[data-key]');if(c){exPicked[c.dataset.key]=c.checked;renderEx()}});
 $('ex-all').onclick=()=>{exCandidates().forEach(e=>exPicked[e.key]=true);renderEx()};
 $('ex-none').onclick=()=>{exCandidates().forEach(e=>exPicked[e.key]=false);renderEx()};
