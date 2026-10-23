@@ -233,7 +233,7 @@ textarea::placeholder{color:var(--faint)}
   <div class="box">
     <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><rect x="6" y="9" width="28" height="6" rx="3" fill="#1d5fbf"/><rect x="6" y="17" width="20" height="6" rx="3" fill="#1b6e66"/><rect x="6" y="25" width="24" height="6" rx="3" fill="#5b7a1f"/></svg>
     <h1>나만의 기록</h1>
-    <p>업무일지, 모닝페이지, 독서일지를 쓰는 곳이에요. 대시보드와 같은 계정으로 로그인하세요. 기록은 나만 볼 수 있어요.</p>
+    <p>업무일지, 모닝페이지, 독서일지를 쓰는 곳이에요. 처음이라면 아래 "계정 만들기"로 시작하세요. 기록은 나만 볼 수 있어요.</p>
     <form id="login-form">
       <input id="le" type="email" placeholder="이메일" autocomplete="username" required aria-label="이메일">
       <input id="lp" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="current-password" required minlength="6" aria-label="비밀번호">
@@ -360,7 +360,7 @@ $('ltoggle').onclick=()=>{signup=!signup;$('lsubmit').textContent=signup?'계정
 $('login-form').addEventListener('submit',async e=>{
   e.preventDefault(); $('lmsg').textContent='확인 중…';
   try{const em=$('le').value.trim(),pw=$('lp').value; signup?await createUserWithEmailAndPassword(auth,em,pw):await signInWithEmailAndPassword(auth,em,pw); $('lmsg').textContent=''}
-  catch(err){const m={'auth/invalid-credential':'이메일 또는 비밀번호가 맞지 않습니다.','auth/email-already-in-use':'이미 가입된 이메일이에요. 로그인해 주세요.','auth/weak-password':'비밀번호는 6자 이상이어야 해요.','auth/invalid-email':'이메일 형식을 확인해 주세요.','auth/operation-not-allowed':'지금은 새 계정을 만들 수 없어요.','auth/admin-restricted-operation':'지금은 새 계정을 만들 수 없어요.','auth/network-request-failed':'인터넷 연결을 확인해 주세요.'};
+  catch(err){const m={'auth/invalid-credential':'이메일 또는 비밀번호가 맞지 않아요. 처음이라면 아래 "계정 만들기"를 눌러 주세요.','auth/email-already-in-use':'이미 가입된 이메일이에요. 로그인해 주세요.','auth/weak-password':'비밀번호는 6자 이상이어야 해요.','auth/invalid-email':'이메일 형식을 확인해 주세요.','auth/operation-not-allowed':'지금은 새 계정을 만들 수 없어요.','auth/admin-restricted-operation':'지금은 새 계정을 만들 수 없어요.','auth/network-request-failed':'인터넷 연결을 확인해 주세요.'};
     $('lmsg').textContent=m[err.code]||('로그인하지 못했습니다 ('+err.code+')')}
 });
 $('logout').onclick=async()=>{await flush();signOut(auth)};
