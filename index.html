@@ -49,7 +49,7 @@ button{cursor:pointer;border:0;background:none;padding:0}
 .acct{display:flex;align-items:center;gap:14px;font-size:13px;color:var(--muted)}
 .acct button{font-size:13px;color:var(--muted)}
 .acct button:hover{color:var(--text)}
-.sync.off{color:var(--negative);font-weight:600}
+.sync.off{color:#92400e;font-weight:600}
 
 /* 버튼 */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:38px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:500;transition:background .15s,transform .1s}
@@ -328,8 +328,12 @@ textarea::placeholder{color:var(--faint)}
 import { firebaseConfig } from "./firebase-config.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-const app=initializeApp(firebaseConfig), auth=getAuth(app), fs=getFirestore(app);
+import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const app=initializeApp(firebaseConfig), auth=getAuth(app);
+/* 오프라인: 기록을 기기 안(IndexedDB)에도 보관 → 인터넷이 없어도 열리고 써지고, 연결되면 자동으로 올라감 */
+let fs; try{fs=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})})}catch(e){fs=getFirestore(app)}
+/* 앱 화면을 기기에 저장 (비행기 모드에서도 열리게) */
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 
 const $=id=>document.getElementById(id);
 const DOW=['일','월','화','수','목','금','토'];
@@ -369,10 +373,12 @@ onAuthStateChanged(auth,u=>{
   if(unsub){unsub();unsub=null} me=u; entries={work:{},morning:{},read:{}}; loaded=false;
   if(!u){$('login').hidden=false;$('app').hidden=true;return}
   $('login').hidden=true;$('app').hidden=false;$('who').textContent=u.email;
-  unsub=onSnapshot(collection(fs,'mine',u.uid,'journal'),s=>{
+  unsub=onSnapshot(collection(fs,'mine',u.uid,'journal'),{includeMetadataChanges:true},s=>{
+    hasPending=s.metadata.hasPendingWrites; syncState();
     const E={work:{},morning:{},read:{}};
     s.docs.forEach(d=>{const v=d.data();if(E[v.type]&&((v.text||'').trim()||(v.book||'').trim()))E[v.type][v.date]=v});
     entries=E; loaded=true; $('warn').hidden=true;
+    if(!restored){restored=true;restoreDrafts()}
     renderHome(); if(!$('write').hidden){renderCal();if(!dirty&&document.activeElement!==$('text')&&document.activeElement!==$('book'))loadText()}
   },err=>{loaded=true;$('warn').hidden=false;renderHome()});
   showHome();
@@ -482,6 +488,8 @@ function loadText(){
   $('text').value=e?e.text||'':''; $('book').hidden=type!=='read'; $('book').value=e&&e.book||''; lastSaved=snap(); dirty=false;
   $('d-next').disabled=sel>=T;
   setState(e?'저장됨 · '+timeOf(e.updated):'쓰기 시작하면 자동으로 저장돼요','');
+  const dr=getDraft(type,sel);
+  if(dr&&dr.sn!==snap()&&(!e||(dr.ts||0)>(e.updated||0))){$('text').value=dr.text;$('book').value=dr.book||'';dirty=true;setState('저장 못 한 글을 되살렸어요 · 곧 저장돼요','ok');clearTimeout(saveTimer);saveTimer=setTimeout(save,600)}
   $('del').hidden=!e; $('del').classList.remove('ask'); $('del').textContent='이 날 기록 지우기';
   updateGoal();
 }
@@ -493,27 +501,46 @@ function updateGoal(){
   $('goal').innerHTML=g?'<span class="num">'+n.toLocaleString()+' / '+g.toLocaleString()+'자</span><span class="gbar"><i style="width:'+Math.min(100,Math.round(n/g*100))+'%"></i></span>'+(n>=g?' <b>오늘 분량 완료</b>':''):'<span class="num">'+n.toLocaleString()+'자</span>';
 }
 const snap=()=>$('text').value+'\u0000'+(type==='read'?$('book').value:'');
-['text','book'].forEach(id=>{$(id).addEventListener('input',()=>{dirty=true;setState('입력 중…','');updateGoal();clearTimeout(saveTimer);saveTimer=setTimeout(save,900)});$(id).addEventListener('blur',()=>{if(dirty)save()})});
-async function save(){
-  clearTimeout(saveTimer); if(!me||!dirty)return;
-  const t=type, k=sel, v=$('text').value, bk=t==='read'?$('book').value.trim():'', sn=snap(); dirty=false;
-  if(sn===lastSaved){setState('저장됨','ok');return}
-  const has=!!(v.trim()||bk);
-  try{
-    if(has){await setDoc(entryRef(t,k),{type:t,date:k,text:v,len:count(v),...(t==='read'?{book:bk}:{}),updated:Date.now()})}
-    else{await deleteDoc(entryRef(t,k))}
-    lastSaved=sn; if(t===type&&k===sel){setState(has?'저장됨 · '+timeOf(Date.now()):'비어 있어서 체크를 뺐어요','ok');$('del').hidden=!has}
-    $('warn').hidden=true;
-  }catch(e){dirty=true;setState('저장 안 됨 · 다시 시도해 주세요','err');if(/permission|insufficient/i.test(String(e&&(e.code||e.message))))$('warn').hidden=false}
+['text','book'].forEach(id=>{$(id).addEventListener('input',()=>{dirty=true;putDraft(type,sel);setState('입력 중…','');updateGoal();clearTimeout(saveTimer);saveTimer=setTimeout(save,900)});$(id).addEventListener('blur',()=>{if(dirty)save()})});
+/* 임시 보관함: 글자를 칠 때마다 기기에 바로 저장 (앱이 꺼져도 다시 열면 되살림) */
+let hasPending=false, restored=false, inflight=0;
+const dKey=(t,k)=>'j-draft:'+(me?me.uid:'')+':'+t+'_'+k;
+function putDraft(t,k){try{localStorage.setItem(dKey(t,k),JSON.stringify({text:$('text').value,book:t==='read'?$('book').value:'',sn:snap(),ts:Date.now()}))}catch(e){}}
+function getDraft(t,k){try{return JSON.parse(localStorage.getItem(dKey(t,k))||'null')}catch(e){return null}}
+function dropDraft(t,k,sn){try{const d=getDraft(t,k);if(d&&d.sn===sn)localStorage.removeItem(dKey(t,k))}catch(e){}}
+function writeEntry(t,k,text,book,sn){
+  const has=!!(text.trim()||book.trim());
+  const p=has?setDoc(entryRef(t,k),{type:t,date:k,text,len:count(text),...(t==='read'?{book:book.trim()}:{}),updated:Date.now()}):deleteDoc(entryRef(t,k));
+  inflight++; syncState();
+  return p.then(()=>{inflight--;if(!inflight&&navigator.onLine!==false)hasPending=false;dropDraft(t,k,sn);$('warn').hidden=true;syncState()},err=>{inflight--;syncState();throw err});
 }
-async function flush(){if(dirty)await save()}
-$('del').onclick=async()=>{
+function restoreDrafts(){   // 다른 날짜에 남아 있던 임시 글도 올려 두기
+  try{const pre='j-draft:'+me.uid+':';
+    Object.keys(localStorage).filter(x=>x.startsWith(pre)).forEach(x=>{const [t,k]=x.slice(pre.length).split('_');const d=getDraft(t,k),e=entries[t]&&entries[t][k];
+      if(!d||!TYPES[t])return; if(e&&(e.updated||0)>=(d.ts||0)){localStorage.removeItem(x);return}
+      if(t===type&&k===sel&&!$('write').hidden)return; writeEntry(t,k,d.text||'',d.book||'',d.sn).catch(()=>{})});
+  }catch(e){}
+}
+function save(){
+  clearTimeout(saveTimer); if(!me||!dirty)return;
+  const t=type, k=sel, v=$('text').value, bk=t==='read'?$('book').value:'', sn=snap(); dirty=false;
+  if(sn===lastSaved){setState('저장됨','ok');return}
+  lastSaved=sn; putDraft(t,k);
+  const has=!!(v.trim()||bk.trim()), here=()=>t===type&&k===sel;
+  if(here()){setState(navigator.onLine===false?'기기에 저장됨 · 인터넷이 연결되면 올라가요':'저장 중…','ok');$('del').hidden=!has}
+  writeEntry(t,k,v,bk,sn).then(()=>{if(here()&&snap()===sn)setState(has?'저장됨 · '+timeOf(Date.now()):'비어 있어서 체크를 뺐어요','ok')})
+    .catch(e=>{if(here()){dirty=true;lastSaved='';setState('저장 안 됨 · 글은 기기에 남아 있어요','err')}if(/permission|insufficient/i.test(String(e&&(e.code||e.message))))$('warn').hidden=false});
+}
+async function flush(){if(dirty)save()}
+$('del').onclick=()=>{
   const b=$('del'); if(!b.classList.contains('ask')){b.classList.add('ask');b.textContent='한 번 더 누르면 지워요';setTimeout(()=>{b.classList.remove('ask');b.textContent='이 날 기록 지우기'},3000);return}
-  try{await deleteDoc(entryRef(type,sel));$('text').value='';$('book').value='';dirty=false;loadText();toast('기록을 지웠어요')}catch(e){toast('지우지 못했어요')}
+  try{localStorage.removeItem(dKey(type,sel))}catch(e){}
+  deleteDoc(entryRef(type,sel)).catch(()=>toast('지우지 못했어요'));$('text').value='';$('book').value='';dirty=false;loadText();toast('기록을 지웠어요');
 };
-window.addEventListener('beforeunload',e=>{if(dirty){save();e.preventDefault();e.returnValue=''}});
+window.addEventListener('beforeunload',()=>{if(dirty){putDraft(type,sel);save()}});
+window.addEventListener('pagehide',()=>{if(dirty)putDraft(type,sel)});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush()});
-function syncState(){const s=$('sync');if(!s)return;const on=navigator.onLine!==false;s.textContent=on?'PC·휴대폰 동기화 중':'인터넷 끊김 · 연결되면 다시 저장해 주세요';s.className='sync'+(on?'':' off')}
+function syncState(){const s=$('sync');if(!s)return;const on=navigator.onLine!==false;const wait=hasPending||inflight>0;s.textContent=!on?'오프라인 · 기기에 저장 중':wait?'올리는 중…':'PC·휴대폰 동기화됨';s.className='sync'+(on?'':' off')}
 window.addEventListener('online',()=>{syncState();if(dirty)save()});window.addEventListener('offline',syncState);syncState();
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!dirty&&!$('write').hidden&&document.activeElement!==$('text')&&document.activeElement!==$('book'))loadText()});
 setInterval(()=>{if(!$('home').hidden)renderHome()},60000);
